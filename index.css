@@ -1,0 +1,121 @@
+import { Product } from '@/types';
+import { ShoppingCart, Star, Plus, Minus } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { useCartStore } from '@/store/useStore';
+import { toast } from 'sonner';
+
+interface ProductCardProps {
+  product: Product;
+}
+
+export default function ProductCard({ product }: ProductCardProps) {
+  const { items, addItem, updateQuantity, removeItem } = useCartStore();
+  const cartItem = items.find(item => item.id === product.id);
+
+  const handleAdd = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addItem(product);
+    toast.success(`Added ${product.name} to cart`);
+  };
+
+  const handleUpdateQty = (e: React.MouseEvent, delta: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (cartItem) {
+      const newQty = cartItem.quantity + delta;
+      if (newQty <= 0) {
+        removeItem(product.id);
+        toast.info(`Removed ${product.name} from cart`);
+      } else {
+        updateQuantity(product.id, newQty);
+      }
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-100 hover:shadow-xl transition-all duration-300 p-4 flex flex-col h-full group relative overflow-hidden">
+      {product.discount > 0 && (
+        <Badge className="absolute top-2 left-2 bg-orange-500 hover:bg-orange-600 z-10">
+          {product.discount}% OFF
+        </Badge>
+      )}
+      
+      <div className="aspect-square mb-4 overflow-hidden rounded-2xl bg-gradient-to-br from-slate-50 to-white flex items-center justify-center p-6 relative group/image border border-slate-50 ring-1 ring-inset ring-slate-200/50">
+        <img 
+          src={product.images[0]} 
+          alt={product.name}
+          className="max-h-full max-w-full object-contain group-hover:scale-110 group-hover:rotate-2 transition-all duration-500 mix-blend-multiply"
+        />
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/[0.02] transition-colors pointer-events-none" />
+      </div>
+
+      <div className="flex-grow flex flex-col">
+        <div className="flex items-center gap-1 mb-1">
+          <Badge variant="outline" className="text-[10px] uppercase font-bold text-slate-500 px-1 py-0 h-4 border-slate-200">
+            {product.brand}
+          </Badge>
+          {product.rxRequired && (
+            <Badge variant="destructive" className="text-[10px] uppercase font-bold px-1 py-0 h-4">
+              Rx
+            </Badge>
+          )}
+        </div>
+
+        <h3 className="font-semibold text-slate-900 leading-snug line-clamp-2 h-10 mb-1 group-hover:text-blue-600 transition-colors">
+          {product.name}
+        </h3>
+        
+        <p className="text-xs text-slate-500 mb-3 line-clamp-1">{product.composition}</p>
+
+        <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center text-yellow-500">
+            <Star size={14} fill="currentColor" />
+            <span className="text-sm font-bold ml-1 text-slate-700">{product.rating.average}</span>
+          </div>
+          <span className="text-xs text-slate-400">({product.rating.count} reviews)</span>
+        </div>
+
+        <div className="mt-auto">
+          <div className="flex items-baseline gap-2 mb-3">
+            <span className="text-lg font-bold text-slate-900">₹{product.price}</span>
+            {product.mrp > product.price && (
+              <span className="text-xs text-slate-400 line-through">₹{product.mrp}</span>
+            )}
+          </div>
+
+          {cartItem ? (
+            <div className="flex items-center justify-between bg-blue-600 rounded-lg h-10 px-2 text-white">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 hover:bg-blue-700 text-white p-0"
+                onClick={(e) => handleUpdateQty(e, -1)}
+              >
+                <Minus size={18} />
+              </Button>
+              <span className="font-bold">{cartItem.quantity}</span>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 hover:bg-blue-700 text-white p-0"
+                onClick={(e) => handleUpdateQty(e, 1)}
+              >
+                <Plus size={18} />
+              </Button>
+            </div>
+          ) : (
+            <Button 
+              className="w-full h-10 bg-blue-600 hover:bg-blue-700 text-white font-bold gap-2"
+              onClick={handleAdd}
+            >
+              <Plus size={18} />
+              Add to Cart
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,205 @@
+import { useState, useRef } from 'react';
+import { 
+  Upload, 
+  X, 
+  FileText, 
+  CheckCircle2, 
+  AlertCircle,
+  Clock,
+  ShieldCheck,
+  ChevronRight
+} from 'lucide-react';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger,
+  DialogDescription,
+  DialogFooter
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+
+export default function PrescriptionModal({ children }: { children: React.ReactNode }) {
+  const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      validateAndSetFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    if (e.target.files && e.target.files[0]) {
+      validateAndSetFile(e.target.files[0]);
+    }
+  };
+
+  const validateAndSetFile = (file: File) => {
+    const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Invalid file type. Please upload an image or PDF.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File size too large. Max limit is 5MB.');
+      return;
+    }
+    setFile(file);
+  };
+
+  const handleUpload = async () => {
+    if (!file) return;
+    setIsUploading(true);
+    
+    // Simulate upload delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    setIsUploading(false);
+    setIsSuccess(true);
+    toast.success('Prescription uploaded successfully!');
+  };
+
+  const reset = () => {
+    setFile(null);
+    setIsSuccess(false);
+    setIsUploading(false);
+  };
+
+  return (
+    <Dialog open={undefined} onOpenChange={(open) => !open && reset()}>
+      <DialogTrigger render={children as any} />
+      <DialogContent className="sm:max-w-[500px] rounded-3xl overflow-hidden p-0 border-none shadow-2xl">
+        <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-8 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+              <Upload size={24} /> Upload Prescription
+            </DialogTitle>
+            <DialogDescription className="text-blue-100 mt-2">
+              Our pharmacists will review your prescription and add the medicines to your cart.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+
+        <div className="p-8">
+          {!isSuccess ? (
+            <div className="space-y-6">
+              <div 
+                onDragEnter={handleDrag}
+                onDragOver={handleDrag}
+                onDragLeave={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={cn(
+                  "border-2 border-dashed rounded-2xl p-10 text-center transition-all cursor-pointer group relative overflow-hidden",
+                  dragActive ? "border-blue-500 bg-blue-50 scale-[0.98]" : "border-slate-200 hover:border-blue-400 hover:bg-slate-50",
+                  file ? "border-green-200 bg-green-50" : ""
+                )}
+              >
+                <input 
+                  ref={fileInputRef}
+                  type="file" 
+                  className="hidden" 
+                  onChange={handleChange}
+                  accept="image/*,.pdf"
+                />
+                
+                {file ? (
+                  <div className="flex flex-col items-center">
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center text-green-600 mb-4 animate-in zoom-in">
+                      <FileText size={32} />
+                    </div>
+                    <p className="font-bold text-slate-900 line-clamp-1">{file.name}</p>
+                    <p className="text-sm text-slate-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFile(null);
+                      }}
+                      className="absolute top-2 right-2 p-2 text-slate-400 hover:text-red-500 transition-colors"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 mb-4 group-hover:scale-110 transition-transform">
+                      <Upload size={32} />
+                    </div>
+                    <p className="font-bold text-slate-900 leading-none mb-1">Click or drag & drop</p>
+                    <p className="text-sm text-slate-500">JPG, PNG or PDF (Max 5MB)</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="text-green-500 mt-1 shrink-0" size={18} />
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">100% Privacy Guaranteed</p>
+                    <p className="text-xs text-slate-500">Your prescription is encrypted and handled securely.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <Clock className="text-blue-500 mt-1 shrink-0" size={18} />
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">Review in 15 mins</p>
+                    <p className="text-xs text-slate-500">Expect a call from our registered pharmacist shortly.</p>
+                  </div>
+                </div>
+              </div>
+
+              <Button 
+                disabled={!file || isUploading}
+                onClick={handleUpload}
+                className="w-full h-12 bg-blue-600 hover:bg-blue-700 rounded-xl font-bold text-lg"
+              >
+                {isUploading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Uploading...
+                  </div>
+                ) : 'Submit Prescription'}
+              </Button>
+            </div>
+          ) : (
+            <div className="text-center py-6 animate-in fade-in slide-in-from-bottom-4">
+              <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <CheckCircle2 size={48} />
+              </div>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">Wait! We are on it.</h3>
+              <p className="text-slate-500 mb-8 max-w-xs mx-auto">
+                We have received your prescription. Our pharmacist will review it and call you within 15 minutes.
+              </p>
+              <DialogTrigger render={
+                <Button className="w-full h-12 bg-slate-900 hover:bg-slate-800 rounded-xl font-bold">
+                  Got it, Thanks!
+                </Button>
+              } />
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

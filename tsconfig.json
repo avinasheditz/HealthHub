@@ -1,0 +1,4 @@
+# JWT
+JWT_SECRET=your_super_secret_jwt_key_here
+# Admin
+ADMIN_ALLOWED_IPS=127.0.0.1,::1

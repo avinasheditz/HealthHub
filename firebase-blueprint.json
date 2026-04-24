@@ -1,0 +1,208 @@
+import { useState, useEffect, useRef } from 'react';
+import { Search, X, Pill, FlaskConical, User as DoctorIcon, ChevronRight } from 'lucide-react';
+import { Input } from "@/components/ui/input";
+import { Link, useNavigate } from 'react-router-dom';
+import { MOCK_PRODUCTS, MOCK_DOCTORS, MOCK_PACKAGES } from '@/data/mockData';
+import { cn } from '@/lib/utils';
+
+export default function SearchBar() {
+  const [query, setQuery] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [results, setResults] = useState<{
+    medicines: typeof MOCK_PRODUCTS;
+    doctors: typeof MOCK_DOCTORS;
+    labs: typeof MOCK_PACKAGES;
+  }>({
+    medicines: [],
+    doctors: [],
+    labs: []
+  });
+  
+  const searchRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (query.trim().length > 1) {
+      const q = query.toLowerCase();
+      
+      const filteredMedicines = MOCK_PRODUCTS.filter(p => 
+        p.name.toLowerCase().includes(q) || 
+        p.category.toLowerCase().includes(q) ||
+        p.brand.toLowerCase().includes(q)
+      ).slice(0, 4);
+
+      const filteredDoctors = MOCK_DOCTORS.filter(d => 
+        d.name.toLowerCase().includes(q) || 
+        d.specialization.toLowerCase().includes(q)
+      ).slice(0, 3);
+
+      const filteredLabs = MOCK_PACKAGES.filter(l => 
+        l.name.toLowerCase().includes(q) || 
+        l.includes.some(inc => inc.toLowerCase().includes(q))
+      ).slice(0, 3);
+
+      setResults({
+        medicines: filteredMedicines,
+        doctors: filteredDoctors,
+        labs: filteredLabs
+      });
+      setIsOpen(true);
+    } else {
+      setResults({ medicines: [], doctors: [], labs: [] });
+      setIsOpen(false);
+    }
+  }, [query]);
+
+  const handleSelect = (path: string) => {
+    setQuery('');
+    setIsOpen(false);
+    navigate(path);
+  };
+
+  const hasResults = results.medicines.length > 0 || results.doctors.length > 0 || results.labs.length > 0;
+
+  return (
+    <div className="flex-grow max-w-2xl relative" ref={searchRef}>
+      <Input 
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onFocus={() => query.trim().length > 1 && setIsOpen(true)}
+        placeholder="Search medicines, labs, or doctors..." 
+        className="w-full bg-slate-100 border-none focus-visible:ring-blue-600 pl-10 h-10 rounded-xl"
+      />
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+      
+      {query && (
+        <button 
+          onClick={() => setQuery('')}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+        >
+          <X size={16} />
+        </button>
+      )}
+
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="max-h-[70vh] overflow-y-auto">
+            {!hasResults ? (
+              <div className="p-8 text-center">
+                <Search className="mx-auto text-slate-200 mb-4" size={48} />
+                <p className="text-slate-500 font-medium">No results found for "{query}"</p>
+                <p className="text-slate-400 text-sm">Try searching for generic names or categories</p>
+              </div>
+            ) : (
+              <div className="p-2">
+                {results.medicines.length > 0 && (
+                  <div className="mb-4">
+                    <div className="px-3 py-2 text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-2">
+                      <Pill size={12} /> Medicines
+                    </div>
+                    {results.medicines.map(item => (
+                      <button
+                        key={item.id}
+                        onClick={() => handleSelect(`/product/${item.slug}`)}
+                        className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-blue-50 transition-colors text-left group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-slate-50 rounded-lg p-1 flex-shrink-0 flex items-center justify-center">
+                            <img src={item.images[0]} alt="" className="w-full h-full object-contain" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{item.name}</p>
+                            <p className="text-xs text-slate-500">{item.brand} • {item.category}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                           <p className="text-sm font-bold text-slate-900">₹{item.price}</p>
+                           <ChevronRight size={16} className="text-slate-300 group-hover:text-blue-400" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {results.labs.length > 0 && (
+                  <div className="mb-4">
+                    <div className="px-3 py-2 text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-2">
+                      <FlaskConical size={12} /> Lab Tests & Packages
+                    </div>
+                    {results.labs.map(pkg => (
+                      <button
+                        key={pkg.id}
+                        onClick={() => handleSelect('/lab-tests')}
+                        className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-purple-50 transition-colors text-left group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center text-purple-600">
+                            <FlaskConical size={20} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900 group-hover:text-purple-600 transition-colors">{pkg.name}</p>
+                            <p className="text-xs text-slate-500">{pkg.parameters} parameters • {pkg.lab}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                           <p className="text-sm font-bold text-slate-900">₹{pkg.price}</p>
+                           <ChevronRight size={16} className="text-slate-300 group-hover:text-purple-400" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {results.doctors.length > 0 && (
+                  <div className="mb-2">
+                    <div className="px-3 py-2 text-[10px] uppercase font-bold text-slate-400 tracking-wider flex items-center gap-2">
+                      <DoctorIcon size={12} /> Top Doctors
+                    </div>
+                    {results.doctors.map(doc => (
+                      <button
+                        key={doc.id}
+                        onClick={() => handleSelect('/consult')}
+                        className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-teal-50 transition-colors text-left group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-slate-100 rounded-full overflow-hidden flex-shrink-0">
+                            <img src={doc.image} alt="" className="w-full h-full object-cover" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-900 group-hover:text-teal-600 transition-colors">{doc.name}</p>
+                            <p className="text-xs text-slate-500">{doc.specialization} • {doc.experience} yrs exp</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                           <p className="text-sm font-bold text-slate-900">₹{doc.fee}</p>
+                           <ChevronRight size={16} className="text-slate-300 group-hover:text-teal-400" />
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                
+                <div className="p-3 border-t bg-slate-50">
+                  <button 
+                    onClick={() => handleSelect(`/medicines?q=${query}`)}
+                    className="w-full p-2 text-center text-sm font-bold text-blue-600 hover:text-blue-700"
+                  >
+                    View all results for "{query}"
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
